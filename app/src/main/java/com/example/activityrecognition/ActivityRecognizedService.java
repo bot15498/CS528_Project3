@@ -36,25 +36,35 @@ public class ActivityRecognizedService extends IntentService {
 
     private void handleDetectedActivities(List<DetectedActivity> probablyActivities) {
         for (DetectedActivity activity : probablyActivities) {
+            int confidence = activity.getConfidence();
             switch (activity.getType()) {
                 case DetectedActivity.IN_VEHICLE: {
+                    if (confidence > 10) {
+                        notifyActivity("in_vehicle");
+                    }
                     Log.e("ActivityRecognition", "In vehicle: " + activity.getConfidence());
-                    notifyActivity("in_vehicle");
                     break;
                 }
                 case DetectedActivity.RUNNING: {
+                    if (confidence > 10) {
+                        notifyActivity("running");
+                    }
                     Log.e("ActivityRecognition", "Running: " + activity.getConfidence());
-                    notifyActivity("running");
                     break;
                 }
                 case DetectedActivity.STILL: {
+                    if (confidence > 10) {
+                        notifyActivity("still");
+                    }
                     Log.e("ActivityRecognition", "Still: " + activity.getConfidence());
                     notifyActivity("still");
                     break;
                 }
                 case DetectedActivity.WALKING: {
+                    if (confidence > 10) {
+                        notifyActivity("walking");
+                    }
                     Log.e("ActivityRecognition", "Walking: " + activity.getConfidence());
-                    notifyActivity("walking");
                     break;
                 }
             }

@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity implements
 	private LatLng latlng;
 
 	private static ImageView detectedActivityImageView;
+	private static TextView activityTextView;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -58,6 +60,7 @@ public class MainActivity extends AppCompatActivity implements
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		detectedActivityImageView = findViewById(R.id.detectedActivityImageView);
+		activityTextView = findViewById(R.id.activity);
 
 		createGoogleApi();
 
@@ -265,11 +268,17 @@ public class MainActivity extends AppCompatActivity implements
 				if (detectedActivityImageView != null) {
 					detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
 				}
+				if (activityTextView != null) {
+					activityTextView.setText("You are in a Car");
+				}
 				break;
 			}
 			case "running": {
 				if (detectedActivityImageView != null) {
 					detectedActivityImageView.setImageResource(R.mipmap.ic_running);
+				}
+				if (activityTextView != null) {
+					activityTextView.setText("You are Running");
 				}
 				break;
 			}
@@ -277,11 +286,17 @@ public class MainActivity extends AppCompatActivity implements
 				if (detectedActivityImageView != null) {
 					detectedActivityImageView.setImageResource(R.mipmap.ic_still);
 				}
+				if (activityTextView != null) {
+					activityTextView.setText("You are Still");
+				}
 				break;
 			}
 			case "walking": {
 				if (detectedActivityImageView != null) {
 					detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
+				}
+				if (activityTextView != null) {
+					activityTextView.setText("You are Walking");
 				}
 				break;
 			}
