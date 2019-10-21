@@ -27,7 +27,6 @@ import java.util.List;
 
 public class GeofenceTrasitionService extends IntentService {
 
-
     private static final String TAG = GeofenceTrasitionService.class.getSimpleName();
     //public static final int GEOFENCE_NOTIFICATION_ID = 0;
 

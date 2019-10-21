@@ -6,19 +6,24 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.IntentService;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
-import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
@@ -39,11 +44,12 @@ public class MainActivity extends AppCompatActivity implements
 		ResultCallback<Status> {
 
 
-	private GoogleApiClient googleApiClient;
+	private GoogleApiClient mApiClient;
 	private static final String TAG = MainActivity.class.getSimpleName();
 	private GoogleMap map;
 	private LatLng latlng;
 
+	private static ImageView detectedActivityImageView;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements
 		setContentView(R.layout.activity_main);
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+		detectedActivityImageView = findViewById(R.id.detectedActivityImageView);
 
 		createGoogleApi();
 
@@ -61,7 +68,13 @@ public class MainActivity extends AppCompatActivity implements
 		markerForGeofence(latlng);
 		startGeofence();
 
+		mApiClient = new GoogleApiClient.Builder(this)
+				.addApi(ActivityRecognition.API)
+				.addConnectionCallbacks(this)
+				.addOnConnectionFailedListener(this)
+				.build();
 
+		mApiClient.connect();
 	}
 
 	private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
@@ -155,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements
 		Log.d(TAG, "addGeofence");
 		if (checkPermission())
 			LocationServices.GeofencingApi.addGeofences(
-					googleApiClient,
+					mApiClient,
 					request,
 					createGeofencePendingIntent()
 			).setResultCallback(this);
@@ -173,8 +186,8 @@ public class MainActivity extends AppCompatActivity implements
 	// Create GoogleApiClient instance
 	private void createGoogleApi () {
 		Log.d(TAG, "createGoogleApi()");
-		if (googleApiClient == null) {
-			googleApiClient = new GoogleApiClient.Builder(this)
+		if (mApiClient == null) {
+			mApiClient = new GoogleApiClient.Builder(this)
 					.addConnectionCallbacks(this) // this
 					.addOnConnectionFailedListener(this)
 					.addApi(LocationServices.API)
@@ -185,11 +198,13 @@ public class MainActivity extends AppCompatActivity implements
 
 	@Override
 	public void onConnected (@Nullable Bundle bundle){
-
+		Intent intent = new Intent(this, ActivityRecognizedService.class);
+		PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+		ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mApiClient, 3000, pendingIntent);
 	}
 
 	@Override
-	public void onConnectionSuspended ( int i){
+	public void onConnectionSuspended (int i){
 
 	}
 
@@ -217,7 +232,7 @@ public class MainActivity extends AppCompatActivity implements
 
 	// Draw Geofence circle on GoogleMap
 	private Circle geoFenceLimits;
-	private void drawGeofence () {
+	private void drawGeofence() {
 		Log.d(TAG, "drawGeofence()");
 
 		if (geoFenceLimits != null)
@@ -241,6 +256,60 @@ public class MainActivity extends AppCompatActivity implements
 			addGeofence(geofenceRequest);
 		} else {
 			Log.e(TAG, "Geofence marker is null");
+		}
+	}
+
+	static void updateImage(String activity) {
+		switch (activity) {
+			case "in_car": {
+				if (detectedActivityImageView != null) {
+					detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
+				}
+				break;
+			}
+			case "running": {
+				if (detectedActivityImageView != null) {
+					detectedActivityImageView.setImageResource(R.mipmap.ic_running);
+				}
+				break;
+			}
+			case "still": {
+				if (detectedActivityImageView != null) {
+					detectedActivityImageView.setImageResource(R.mipmap.ic_still);
+				}
+				break;
+			}
+			case "walking": {
+				if (detectedActivityImageView != null) {
+					detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
+				}
+				break;
+			}
+		}
+	}
+
+	public static class ActivityBroadcastReceiver extends BroadcastReceiver {
+//		private final Handler handler; // Handler used to execute code on the UI thread
+//
+//		public ActivityBroadcastReceiver(Handler handler) {
+//			this.handler = handler;
+//		}
+
+		@Override
+		public void onReceive(final Context context, Intent intent) {
+			// Post the UI updating code to our Handler
+//			handler.post(new Runnable() {
+//				@Override
+//				public void run() {
+//					Toast.makeText(context, "Toast from broadcast receiver", Toast.LENGTH_SHORT).show();
+//				}
+//			});
+
+			Bundle extras = intent.getExtras();
+			if (extras != null) {
+				String activity = (String) extras.get("activity");
+				updateImage(activity);
+			}
 		}
 	}
 
