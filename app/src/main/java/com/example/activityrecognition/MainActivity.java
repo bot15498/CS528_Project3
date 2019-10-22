@@ -13,6 +13,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -20,6 +24,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.activityrecognition.StepCounter.StepCounterContainer;
+import com.example.activityrecognition.StepCounter.StepDetector;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
@@ -42,7 +48,10 @@ public class MainActivity extends AppCompatActivity implements
 		GoogleApiClient.ConnectionCallbacks,
 		GoogleApiClient.OnConnectionFailedListener,
 		OnMapReadyCallback,
-		ResultCallback<Status> {
+		ResultCallback<Status>,
+		SensorEventListener,
+		StepCounterContainer
+{
 
 
 	private GoogleApiClient mApiClient;
@@ -52,6 +61,13 @@ public class MainActivity extends AppCompatActivity implements
 
 	private static ImageView detectedActivityImageView;
 	private static TextView activityTextView;
+
+	private DatabaseLab dbLab;
+	private SensorManager mSensorManager;
+	private Sensor accel;
+	private StepDetector mStepDetector;
+	private int steps = 0;
+	private TextView stepCounterTextView;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +94,16 @@ public class MainActivity extends AppCompatActivity implements
 				.build();
 
 		mApiClient.connect();
+
+		// Sensor init stuff for step counting
+		dbLab = DatabaseLab.get(getApplicationContext());
+		mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+		accel = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		mSensorManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_FASTEST);
+		mStepDetector = new StepDetector();
+		mStepDetector.addListener(this);
+		stepCounterTextView = findViewById(R.id.steps);
+		updateStepCount();
 	}
 
 	private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
@@ -326,6 +352,31 @@ public class MainActivity extends AppCompatActivity implements
 				updateImage(activity);
 			}
 		}
+	}
+
+	//+++++++++++++++++++ Sensor event listener for step counting +++++++++++
+
+	@Override
+	public void onSensorChanged(SensorEvent sensorEvent) {
+		if(sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+			mStepDetector.updateAccel(sensorEvent.values[0], sensorEvent.values[1], sensorEvent.values[2]);
+		}
+	}
+
+	@Override
+	public void onAccuracyChanged(Sensor sensor, int i) {
+		// cry
+	}
+
+	@Override
+	public void step() {
+		steps++;
+		updateStepCount();
+	}
+
+	private void updateStepCount() {
+		String stepText = getText(R.string.steps) + " " + Integer.toString(steps);
+		stepCounterTextView.setText(stepText);
 	}
 
 }
