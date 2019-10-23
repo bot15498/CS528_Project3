@@ -2,7 +2,7 @@ package com.example.activityrecognition.StepCounter;
 
 public class StepDetector {
 	private static final int TS_LENGTH = 100;
-	private static final float MIN_ACCEL_DIFF = 1f;
+	private static final float MIN_ACCEL_DIFF = 10f;
 
 	private StepCounterContainer counter;
 	private float[] accelX = new float[TS_LENGTH];

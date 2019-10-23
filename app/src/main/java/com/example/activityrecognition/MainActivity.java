@@ -12,11 +12,13 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -44,6 +46,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.io.IOException;
+
 public class MainActivity extends AppCompatActivity implements
 		GoogleApiClient.ConnectionCallbacks,
 		GoogleApiClient.OnConnectionFailedListener,
@@ -68,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements
 	private StepDetector mStepDetector;
 	private int steps = 0;
 	private TextView stepCounterTextView;
+
+	private MediaPlayer player;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +110,11 @@ public class MainActivity extends AppCompatActivity implements
 		mStepDetector.addListener(this);
 		stepCounterTextView = findViewById(R.id.steps);
 		updateStepCount();
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
 	}
 
 	private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
@@ -326,6 +337,18 @@ public class MainActivity extends AppCompatActivity implements
 				}
 				break;
 			}
+		}
+	}
+
+	private void prepareMusicFile() {
+		try {
+			AssetFileDescriptor afd;
+			afd = getAssets().openFd("beat_02.mp3");
+			player = new MediaPlayer();
+			player.setDataSource(afd.getFileDescriptor(), afd.getStartOffset(), afd.getLength());
+			player.prepare();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
