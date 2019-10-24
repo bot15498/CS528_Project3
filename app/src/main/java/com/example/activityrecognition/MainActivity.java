@@ -81,6 +81,12 @@ public class MainActivity extends AppCompatActivity implements
 	private String currGeofenceID = "";
 	private long lastEnterTime = 0;
 	private BroadcastReceiver broadcastReceiver;
+	private TextView libraryTextView;
+	private TextView fullerTextView;
+	private int libraryVisits;
+	private int fullerVisits;
+	private static final String FULLER = "Fuller Labs";
+	private static final String LIBRARY = "Gordon Library";
 
 	private static ImageView detectedActivityImageView;
 	private static TextView activityTextView;
@@ -100,8 +106,14 @@ public class MainActivity extends AppCompatActivity implements
 		// Geofencing pre-init. Real init is after map and location services are loaded.
 		if(checkPermission()) {
 			geofenceInfo = new HashMap<String, LatLng>();
-			geofenceInfo.put("Fuller", new LatLng(42.274852, -71.806690));
-			geofenceInfo.put("Library", new LatLng(42.274292, -71.806641));
+			geofenceInfo.put(FULLER, new LatLng(42.274852, -71.806690));
+			geofenceInfo.put(LIBRARY, new LatLng(42.274292, -71.806641));
+			libraryTextView = findViewById(R.id.library);
+			fullerTextView = findViewById(R.id.fuller);
+			String fullerTxt = getText(R.string.fuller) + Integer.toString(fullerVisits);
+			fullerTextView.setText(fullerTxt);
+			String libraryTxt = getText(R.string.library) + Integer.toString(libraryVisits);
+			libraryTextView.setText(libraryTxt);
 			startGeofence();
 		}
 
@@ -112,15 +124,6 @@ public class MainActivity extends AppCompatActivity implements
 		createGoogleApi();
 
 		mapFragment.getMapAsync(this);
-
-//		mApiClient = new GoogleApiClient.Builder(this)
-//				.addApi(ActivityRecognition.API)
-//				.addConnectionCallbacks(this)
-//				.addOnConnectionFailedListener(this)
-//				.build();
-//
-//		mApiClient.connect();
-
 
 		// Sensor init stuff for step counting
 		dbLab = DatabaseLab.get(getApplicationContext());
@@ -199,6 +202,7 @@ public class MainActivity extends AppCompatActivity implements
 								String msg = String.format(Locale.US, "You have been in %s geofence for %.2f seconds", place, duration);
 								Toast toast = Toast.makeText(getApplicationContext(), msg,Toast.LENGTH_LONG);
 								toast.show();
+								updateGeofenceText(place);
 							}
 							currGeofenceID = "";
 							break;
@@ -208,6 +212,18 @@ public class MainActivity extends AppCompatActivity implements
 		};
 		IntentFilter filter = new IntentFilter("com.example.activityrecognition.GeofenceTrasitionService");
 		registerReceiver(broadcastReceiver, filter);
+	}
+
+	private void updateGeofenceText(String place) {
+		if(place.equals(FULLER)) {
+			fullerVisits++;
+			String txt = getText(R.string.fuller) + Integer.toString(fullerVisits);
+			fullerTextView.setText(txt);
+		} else if (place.equals(LIBRARY)) {
+			libraryVisits++;
+			String txt = getText(R.string.library) + Integer.toString(libraryVisits);
+			libraryTextView.setText(txt);
+		}
 	}
 
 	// Create a Geofence --step1--
