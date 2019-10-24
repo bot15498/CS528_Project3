@@ -2,6 +2,8 @@ package com.example.activityrecognition;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.os.Bundle;
+import android.os.ResultReceiver;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -11,11 +13,9 @@ import com.google.android.gms.location.DetectedActivity;
 
 import java.util.List;
 
+import static com.google.android.gms.games.multiplayer.Participant.STATUS_FINISHED;
+
 public class ActivityRecognizedService extends IntentService {
-
-    private static int CONFIDENCE_LEVEL = 50;
-
-    MainActivity.ActivityBroadcastReceiver activityBroadcastReceiver;
 
     public ActivityRecognizedService() {
         super("ActivityRecognizedService");
@@ -27,52 +27,59 @@ public class ActivityRecognizedService extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
-        if (ActivityRecognitionResult.hasResult(intent)) {
+        if (intent != null) {
             ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
-            handleDetectedActivities(result.getProbableActivities());
+            if (ActivityRecognitionResult.hasResult(intent)) {
+                String detActivity = handleDetectedActivities(result.getProbableActivities());
+                Intent broadcastIntent = new Intent("com.example.activityrecognition.ActivityRecognizedService");
+                broadcastIntent.putExtra("activity", detActivity);
+                sendBroadcast(broadcastIntent);
+            }
         }
     }
 
-    private void handleDetectedActivities(List<DetectedActivity> probablyActivities) {
+    private String handleDetectedActivities(List<DetectedActivity> probablyActivities) {
+        String highest = null;
+        int highestConfidence = 0;
+
         for (DetectedActivity activity : probablyActivities) {
             int confidence = activity.getConfidence();
             switch (activity.getType()) {
                 case DetectedActivity.IN_VEHICLE: {
-                    if (confidence > CONFIDENCE_LEVEL) {
-                        notifyActivity("in_vehicle");
+                    if (confidence > highestConfidence) {
+                        highest = "in_vehicle";
+                        highestConfidence = confidence;
                     }
                     Log.e("ActivityRecognition", "In vehicle: " + activity.getConfidence());
                     break;
                 }
                 case DetectedActivity.RUNNING: {
-                    if (confidence > CONFIDENCE_LEVEL) {
-                        notifyActivity("running");
+                    if (confidence > highestConfidence) {
+                        highest = "running";
+                        highestConfidence = confidence;
                     }
                     Log.e("ActivityRecognition", "Running: " + activity.getConfidence());
                     break;
                 }
                 case DetectedActivity.STILL: {
-                    if (confidence > CONFIDENCE_LEVEL) {
-                        notifyActivity("still");
+                    if (confidence > highestConfidence) {
+                        highest = "still";
+                        highestConfidence = confidence;
                     }
                     Log.e("ActivityRecognition", "Still: " + activity.getConfidence());
-                    notifyActivity("still");
                     break;
                 }
                 case DetectedActivity.WALKING: {
-                    if (confidence > CONFIDENCE_LEVEL) {
-                        notifyActivity("walking");
+                    if (confidence > highestConfidence) {
+                        highest = "walking";
+                        highestConfidence = confidence;
                     }
                     Log.e("ActivityRecognition", "Walking: " + activity.getConfidence());
                     break;
                 }
             }
         }
-    }
 
-    private void notifyActivity(String activity) {
-        Intent activityIntent = new Intent(this, MainActivity.ActivityBroadcastReceiver.class);
-        activityIntent.putExtra("activity", activity);
-        sendBroadcast(activityIntent);
+        return highest;
     }
 }

@@ -17,6 +17,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.ImageView;
@@ -65,7 +66,8 @@ public class MainActivity extends AppCompatActivity implements
 		ResultCallback<Status>,
 		SensorEventListener,
 		StepCounterContainer,
-		LocationListener {
+		LocationListener,
+		CustomResultReceiver.AppReceiver {
 
 
 	private GoogleApiClient mApiClient;
@@ -83,7 +85,11 @@ public class MainActivity extends AppCompatActivity implements
 	public static final int loiteringDelayMs = 15000;
 	private String currGeofenceID = "";
 	private long lastEnterTime = 0;
+
 	private BroadcastReceiver broadcastReceiver;
+	private BroadcastReceiver activityBroadcastReceiver;
+	private CustomResultReceiver resultReceiver;
+
 	private TextView libraryTextView;
 	private TextView fullerTextView;
 	private int libraryVisits;
@@ -91,8 +97,8 @@ public class MainActivity extends AppCompatActivity implements
 	private static final String FULLER = "Fuller Labs";
 	private static final String LIBRARY = "Gordon Library";
 
-	private static ImageView detectedActivityImageView;
-	private static TextView activityTextView;
+	private ImageView detectedActivityImageView;
+	private TextView activityTextView;
 
 	private DatabaseLab dbLab;
 	private SensorManager mSensorManager;
@@ -107,6 +113,9 @@ public class MainActivity extends AppCompatActivity implements
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		// Register receiver
+		registerReceiver();
 
 		// Geofencing pre-init. Real init is after map and location services are loaded.
 		if(checkPermission()) {
@@ -153,7 +162,6 @@ public class MainActivity extends AppCompatActivity implements
 		intent.putExtra(NOTIFICATION_MSG, msg);
 		return intent;
 	}
-
 
 	// Check for permission to access Location
 	private boolean checkPermission() {
@@ -395,45 +403,62 @@ public class MainActivity extends AppCompatActivity implements
 		}
 	}
 
-	static void updateImage(String activity) {
-		switch (activity) {
-			case "in_car": {
-				if (detectedActivityImageView != null) {
-					detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
+	//+++++++++++++++++++ Activity recognition +++++++++++
+
+	private void registerReceiver() {
+		activityBroadcastReceiver = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String activity = intent.getStringExtra("activity");
+
+				/*
+				 * Step 3: We can update the UI of the activity here
+				 * */
+				if (activity != null) {
+					switch (activity) {
+						case "in_car": {
+							if (detectedActivityImageView != null) {
+								detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
+							}
+							if (activityTextView != null) {
+								activityTextView.setText("You are in a Car");
+							}
+							break;
+						}
+						case "running": {
+							if (detectedActivityImageView != null) {
+								detectedActivityImageView.setImageResource(R.mipmap.ic_running);
+							}
+							if (activityTextView != null) {
+								activityTextView.setText("You are Running");
+							}
+							break;
+						}
+						case "still": {
+							if (detectedActivityImageView != null) {
+								detectedActivityImageView.setImageResource(R.mipmap.ic_still);
+							}
+							if (activityTextView != null) {
+								activityTextView.setText("You are Still");
+							}
+							break;
+						}
+						case "walking": {
+							if (detectedActivityImageView != null) {
+								detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
+							}
+							if (activityTextView != null) {
+								activityTextView.setText("You are Walking");
+							}
+							break;
+						}
+					}
 				}
-				if (activityTextView != null) {
-					activityTextView.setText("You are in a Car");
-				}
-				break;
+				Log.e(getClass().getName(), "Got back activity: " + activity);
 			}
-			case "running": {
-				if (detectedActivityImageView != null) {
-					detectedActivityImageView.setImageResource(R.mipmap.ic_running);
-				}
-				if (activityTextView != null) {
-					activityTextView.setText("You are Running");
-				}
-				break;
-			}
-			case "still": {
-				if (detectedActivityImageView != null) {
-					detectedActivityImageView.setImageResource(R.mipmap.ic_still);
-				}
-				if (activityTextView != null) {
-					activityTextView.setText("You are Still");
-				}
-				break;
-			}
-			case "walking": {
-				if (detectedActivityImageView != null) {
-					detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
-				}
-				if (activityTextView != null) {
-					activityTextView.setText("You are Walking");
-				}
-				break;
-			}
-		}
+		};
+		IntentFilter intentFilter = new IntentFilter("com.example.activityrecognition.ActivityRecognizedService");
+		registerReceiver(activityBroadcastReceiver, intentFilter);
 	}
 
 	private void prepareMusicFile() {
@@ -448,30 +473,9 @@ public class MainActivity extends AppCompatActivity implements
 		}
 	}
 
-
-	public static class ActivityBroadcastReceiver extends BroadcastReceiver {
-//		private final Handler handler; // Handler used to execute code on the UI thread
-//
-//		public ActivityBroadcastReceiver(Handler handler) {
-//			this.handler = handler;
-//		}
-
-		@Override
-		public void onReceive(final Context context, Intent intent) {
-			// Post the UI updating code to our Handler
-//			handler.post(new Runnable() {
-//				@Override
-//				public void run() {
-//					Toast.makeText(context, "Toast from broadcast receiver", Toast.LENGTH_SHORT).show();
-//				}
-//			});
-
-			Bundle extras = intent.getExtras();
-			if (extras != null) {
-				String activity = (String) extras.get("activity");
-				updateImage(activity);
-			}
-		}
+	@Override
+	public void onReceiveResult(int resultCode, Bundle resultData) {
+		Log.e(getClass().getName(), resultData.toString());
 	}
 
 	//+++++++++++++++++++ Sensor event listener for step counting +++++++++++
@@ -499,4 +503,8 @@ public class MainActivity extends AppCompatActivity implements
 		stepCounterTextView.setText(stepText);
 	}
 
+	@Override
+	protected void onStop() {
+		super.onStop();
+	}
 }
