@@ -35,6 +35,11 @@
         <service android:name=".ActivityRecognizedService" />
 
         <receiver android:name=".MainActivity$ActivityBroadcastReceiver" />
+        <!-- <receiver android:name=".MainActivity.GeofenceBroadcastReceiver">
+            <intent-filter>
+                <action android:name="com.example.activityrecognition"></action>
+            </intent-filter>
+        </receiver> -->
     </application>
 
 </manifest>
