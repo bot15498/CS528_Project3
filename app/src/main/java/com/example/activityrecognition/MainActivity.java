@@ -406,6 +406,7 @@ public class MainActivity extends AppCompatActivity implements
 	//+++++++++++++++++++ Activity recognition +++++++++++
 
 	private void registerReceiver() {
+		prepareMusicFile();
 		activityBroadcastReceiver = new BroadcastReceiver() {
 			@Override
 			public void onReceive(Context context, Intent intent) {
@@ -423,6 +424,8 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are in a Car");
 							}
+							if (player != null)
+								player.stop();
 							break;
 						}
 						case "running": {
@@ -432,6 +435,8 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Running");
 							}
+							if (player != null)
+								player.start();
 							break;
 						}
 						case "still": {
@@ -441,6 +446,8 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Still");
 							}
+							if (player != null)
+								player.stop();
 							break;
 						}
 						case "walking": {
@@ -450,6 +457,8 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Walking");
 							}
+							if (player != null)
+								player.stop();
 							break;
 						}
 					}
