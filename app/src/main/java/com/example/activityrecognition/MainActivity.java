@@ -97,8 +97,9 @@ public class MainActivity extends AppCompatActivity implements
 	private static final String FULLER = "Fuller Labs";
 	private static final String LIBRARY = "Gordon Library";
 
-	private static ImageView detectedActivityImageView;
-	private static TextView activityTextView;
+	private ImageView detectedActivityImageView;
+	private TextView activityTextView;
+	private long lastActivityTimestamp;
 
 	private DatabaseLab dbLab;
 	private SensorManager mSensorManager;
@@ -111,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		lastActivityTimestamp = System.currentTimeMillis();
 
 		// Geofencing pre-init. Real init is after map and location services are loaded.
 		if(checkPermission()) {
@@ -143,6 +145,10 @@ public class MainActivity extends AppCompatActivity implements
 		mStepDetector.addListener(this);
 		stepCounterTextView = findViewById(R.id.steps);
 		updateStepCount();
+
+		ActivityBroadcastReceiver activityReceiver = new ActivityBroadcastReceiver();
+		IntentFilter activityBroadcastFilter = new IntentFilter("com.example.activityrecognition.ActivityRecognizedService");
+		registerReceiver(activityReceiver,activityBroadcastFilter);
 	}
 
 	private static final String NOTIFICATION_MSG = "NOTIFICATION MSG";
@@ -394,14 +400,16 @@ public class MainActivity extends AppCompatActivity implements
 		}
 	}
 
-	static void updateImage(String activity) {
+	void updateImage(String activity) {
+		String msg = "";
 		switch (activity) {
 			case "in_car": {
 				if (detectedActivityImageView != null) {
 					detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
 				}
 				if (activityTextView != null) {
-					activityTextView.setText("You are in a Car");
+					msg = "You are in a Car";
+					activityTextView.setText(msg);
 				}
 				break;
 			}
@@ -410,7 +418,8 @@ public class MainActivity extends AppCompatActivity implements
 					detectedActivityImageView.setImageResource(R.mipmap.ic_running);
 				}
 				if (activityTextView != null) {
-					activityTextView.setText("You are Running");
+					msg = "You are Running";
+					activityTextView.setText(msg);
 				}
 				break;
 			}
@@ -419,7 +428,8 @@ public class MainActivity extends AppCompatActivity implements
 					detectedActivityImageView.setImageResource(R.mipmap.ic_still);
 				}
 				if (activityTextView != null) {
-					activityTextView.setText("You are Still");
+					msg = "You are Still";
+					activityTextView.setText(msg);
 				}
 				break;
 			}
@@ -428,7 +438,8 @@ public class MainActivity extends AppCompatActivity implements
 					detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
 				}
 				if (activityTextView != null) {
-					activityTextView.setText("You are Walking");
+					msg = "You are Walking";
+					activityTextView.setText(msg);
 				}
 				break;
 			}
@@ -436,7 +447,7 @@ public class MainActivity extends AppCompatActivity implements
 	}
 
 
-	public static class ActivityBroadcastReceiver extends BroadcastReceiver {
+	public class ActivityBroadcastReceiver extends BroadcastReceiver {
 //		private final Handler handler; // Handler used to execute code on the UI thread
 //
 //		public ActivityBroadcastReceiver(Handler handler) {
@@ -452,11 +463,13 @@ public class MainActivity extends AppCompatActivity implements
 //					Toast.makeText(context, "Toast from broadcast receiver", Toast.LENGTH_SHORT).show();
 //				}
 //			});
-
+			long currTime = System.currentTimeMillis();
 			Bundle extras = intent.getExtras();
 			if (extras != null) {
 				String activity = (String) extras.get("activity");
 				updateImage(activity);
+				dbLab.saveActivity(activity, currTime - lastActivityTimestamp);
+				lastActivityTimestamp = System.currentTimeMillis();
 			}
 		}
 	}

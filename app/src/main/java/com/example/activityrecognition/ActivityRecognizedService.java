@@ -72,7 +72,8 @@ public class ActivityRecognizedService extends IntentService {
     }
 
     private void notifyActivity(String activity) {
-        Intent activityIntent = new Intent(this, MainActivity.ActivityBroadcastReceiver.class);
+        Intent activityIntent = new Intent();
+        activityIntent.setAction("com.example.activityrecognition.ActivityRecognizedService");
         activityIntent.putExtra("activity", activity);
         sendBroadcast(activityIntent);
     }

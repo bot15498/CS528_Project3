@@ -6,7 +6,6 @@ import android.database.sqlite.SQLiteDatabase;
 
 import com.example.activityrecognition.Database.ActivityDataBaseHelper;
 import com.example.activityrecognition.Database.DbSchema.ActivitiesTable;
-import com.example.activityrecognition.Database.DbSchema.VisitTable;
 
 public class DatabaseLab {
 	private static DatabaseLab dbLab;
@@ -25,11 +24,10 @@ public class DatabaseLab {
 		mDatabase = new ActivityDataBaseHelper(mContext).getWritableDatabase();
 	}
 
-	public void saveActivity(String activity) {
-		long time = System.currentTimeMillis() / 1000;
+	public void saveActivity(String activity, long duration) {
 		ContentValues values = new ContentValues();
 		values.put(ActivitiesTable.Cols.ACTIVITY, activity);
-		values.put(ActivitiesTable.Cols.START_TIME, time);
+		values.put(ActivitiesTable.Cols.DURATION, duration);
 		mDatabase.insert(ActivitiesTable.NAME, null, values);
 	}
 }
