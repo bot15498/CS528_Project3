@@ -19,8 +19,11 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -33,10 +36,15 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingClient;
 import com.google.android.gms.location.GeofencingRequest;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapsInitializer;
@@ -62,7 +70,8 @@ public class MainActivity extends AppCompatActivity implements
 		OnMapReadyCallback,
 		ResultCallback<Status>,
 		SensorEventListener,
-		StepCounterContainer{
+		StepCounterContainer,
+		LocationListener {
 
 
 	private GoogleApiClient mApiClient;
@@ -278,12 +287,51 @@ public class MainActivity extends AppCompatActivity implements
 		}
 	}
 
+	@Override
+	public void onLocationChanged(Location location) {
+		// really only care about this.
+	}
+
+	@Override
+	public void onStatusChanged(String s, int i, Bundle bundle) {
+
+	}
+
+	@Override
+	public void onProviderEnabled(String s) {
+
+	}
+
+	@Override
+	public void onProviderDisabled(String s) {
+
+	}
 
 	@Override
 	public void onConnected(@Nullable Bundle bundle) {
 		Intent intent = new Intent(this, ActivityRecognizedService.class);
 		PendingIntent pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 		ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(mApiClient, 3000, pendingIntent);
+
+		// Now set up map fragment to update based on location services.
+		LocationRequest request = LocationRequest.create();
+		request.setInterval(5000); // update every 5 seconds
+		request.setFastestInterval(3000); // update every 3 seconds
+		request.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+		FusedLocationProviderClient client = LocationServices.getFusedLocationProviderClient(this);
+		LocationCallback locationCallback = new LocationCallback() {
+			@Override
+			public void onLocationResult(LocationResult locationResult) {
+				if (locationResult == null) {
+					return;
+				}
+				Location currLocation = locationResult.getLastLocation();
+				latlng = new LatLng(currLocation.getLatitude(), currLocation.getLongitude());
+				map.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, MAP_CAMERA_ZOOM));
+			}
+		};
+
+		client.requestLocationUpdates(request, locationCallback, Looper.getMainLooper());
 	}
 
 	@Override
@@ -386,6 +434,7 @@ public class MainActivity extends AppCompatActivity implements
 			}
 		}
 	}
+
 
 	public static class ActivityBroadcastReceiver extends BroadcastReceiver {
 //		private final Handler handler; // Handler used to execute code on the UI thread
