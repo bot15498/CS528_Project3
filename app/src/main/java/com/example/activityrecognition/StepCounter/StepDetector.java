@@ -2,7 +2,9 @@ package com.example.activityrecognition.StepCounter;
 
 public class StepDetector {
 	private static final int TS_LENGTH = 100;
-	private static final float MIN_ACCEL_DIFF = 1f;
+	private static final float MIN_ACCEL_DIFF = 4f;
+	private static final float MAX_OTHER_ACCEL_DIFF = 4f;
+	private static final double MIN_STEP_DURATION = 1f;
 
 	private StepCounterContainer counter;
 	private float[] accelX = new float[TS_LENGTH];
@@ -10,6 +12,11 @@ public class StepDetector {
 	private float[] accelZ = new float[TS_LENGTH];
 	private int seenPoints = 0;
 	private float lastDominantValue = -99f;
+	private long lastStepTime;
+
+	public StepDetector() {
+		lastStepTime = System.currentTimeMillis();
+	}
 
 	public void updateAccel(float x, float y, float z) {
 		int arrCount = seenPoints % TS_LENGTH;
@@ -22,30 +29,39 @@ public class StepDetector {
 		float[] extremaZ = getExtrema(accelZ);
 		
 		float[] dominantDim = new float[4];
+		float[] otherDims = new float[2];
 		switch(findDominantExtrema(extremaX, extremaY, extremaZ)) {
 			case 0:
 				dominantDim[0] = x;
 				dominantDim[1] = extremaX[0];
 				dominantDim[2] = extremaX[1];
 				dominantDim[3] = extremaX[2];
+				otherDims[0] = extremaY[2] - extremaY[0];
+				otherDims[1] = extremaZ[2] - extremaZ[0];
 				break;
 			case 1:
 				dominantDim[0] = y;
 				dominantDim[1] = extremaY[0];
 				dominantDim[2] = extremaY[1];
 				dominantDim[3] = extremaY[2];
+				otherDims[0] = extremaX[2] - extremaX[0];
+				otherDims[1] = extremaZ[2] - extremaZ[0];
 				break;
 			case 2:
 				dominantDim[0] = z;
 				dominantDim[1] = extremaZ[0];
 				dominantDim[2] = extremaZ[1];
 				dominantDim[3] = extremaZ[2];
+				otherDims[0] = extremaX[2] - extremaX[0];
+				otherDims[1] = extremaY[2] - extremaY[0];
 				break;
 			default:
 				dominantDim[0] = y;
 				dominantDim[1] = extremaY[0];
 				dominantDim[2] = extremaY[1];
 				dominantDim[3] = extremaY[2];
+				otherDims[0] = extremaX[2] - extremaX[0];
+				otherDims[1] = extremaZ[2] - extremaZ[0];
 				break;
 		}
 
@@ -53,8 +69,16 @@ public class StepDetector {
 		if(dominantDim[0] < dominantDim[2]
 				&& dominantDim[0] < lastDominantValue
 				&& lastDominantValue >= dominantDim[2]
-				&& dominantDim[3] - dominantDim[1] > MIN_ACCEL_DIFF) {
-			counter.step();
+				&& dominantDim[3] - dominantDim[1] > MIN_ACCEL_DIFF
+//				&& otherDims[0] < MAX_OTHER_ACCEL_DIFF
+//				&& otherDims[1] < MAX_OTHER_ACCEL_DIFF
+		) {
+			long currTime = System.currentTimeMillis();
+			double stepTime = (currTime - lastStepTime) / 1000;
+			if(stepTime > MIN_STEP_DURATION) {
+				counter.step();
+				lastStepTime = System.currentTimeMillis();
+			}
 		}
 		
 		lastDominantValue = dominantDim[0];
