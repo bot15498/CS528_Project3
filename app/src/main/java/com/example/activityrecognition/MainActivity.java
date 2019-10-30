@@ -175,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements
 	private boolean checkPermission() {
 		Log.d(TAG, "checkPermission()");
 		// Ask for permission if it wasn't granted yet
+		requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1111);
 		return (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED);
 	}
