@@ -44,13 +44,18 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 
@@ -85,6 +90,7 @@ public class MainActivity extends AppCompatActivity implements
 	public static final int loiteringDelayMs = 15000;
 	private String currGeofenceID = "";
 	private long lastEnterTime = 0;
+	private String lastActivity = "";
 
 	private BroadcastReceiver broadcastReceiver;
 	private BroadcastReceiver activityBroadcastReceiver;
@@ -99,6 +105,7 @@ public class MainActivity extends AppCompatActivity implements
 
 	private ImageView detectedActivityImageView;
 	private TextView activityTextView;
+	private long lastActivityTimestamp;
 
 	private DatabaseLab dbLab;
 	private SensorManager mSensorManager;
@@ -113,6 +120,7 @@ public class MainActivity extends AppCompatActivity implements
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		lastActivityTimestamp = System.currentTimeMillis();
 
 		// Register receiver
 		registerReceiver();
@@ -411,11 +419,20 @@ public class MainActivity extends AppCompatActivity implements
 			@Override
 			public void onReceive(Context context, Intent intent) {
 				String activity = intent.getStringExtra("activity");
+				long currTime = System.currentTimeMillis();
 
 				/*
 				 * Step 3: We can update the UI of the activity here
 				 * */
 				if (activity != null) {
+					long duration = currTime - lastActivityTimestamp;
+					if(!lastActivity.equals("")) {
+						dbLab.saveActivity(lastActivity, duration);
+					}
+					Toast toast = Toast.makeText(getApplicationContext(), getActivityToastText(lastActivity, duration), Toast.LENGTH_LONG);
+					toast.show();
+					lastActivity = activity;
+					lastActivityTimestamp = System.currentTimeMillis();
 					switch (activity) {
 						case "in_car": {
 							if (detectedActivityImageView != null) {
@@ -424,8 +441,9 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are in a Car");
 							}
-							if (player != null)
+							if(player != null) {
 								player.stop();
+							}
 							break;
 						}
 						case "running": {
@@ -435,8 +453,9 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Running");
 							}
-							if (player != null)
+							if(player != null) {
 								player.start();
+							}
 							break;
 						}
 						case "still": {
@@ -446,8 +465,9 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Still");
 							}
-							if (player != null)
+							if(player != null) {
 								player.stop();
+							}
 							break;
 						}
 						case "walking": {
@@ -457,8 +477,9 @@ public class MainActivity extends AppCompatActivity implements
 							if (activityTextView != null) {
 								activityTextView.setText("You are Walking");
 							}
-							if (player != null)
+							if(player != null) {
 								player.stop();
+							}
 							break;
 						}
 					}
@@ -468,6 +489,21 @@ public class MainActivity extends AppCompatActivity implements
 		};
 		IntentFilter intentFilter = new IntentFilter("com.example.activityrecognition.ActivityRecognizedService");
 		registerReceiver(activityBroadcastReceiver, intentFilter);
+	}
+
+	private String getActivityToastText(String activity, long duration) {
+		switch(activity) {
+			case "in_car":
+				return String.format(Locale.US, "You were in a moving car for %.2f seconds", duration / 1000f);
+			case "walking":
+				return String.format(Locale.US, "You were walking for %.2f seconds", duration / 1000f);
+			case "running":
+				return String.format(Locale.US, "You were running for %.2f seconds", duration / 1000f);
+			case "still":
+				return String.format(Locale.US, "You were still for %.2f seconds", duration / 1000f);
+			default:
+				return String.format(Locale.US, "Your last activity took %.2f seconds", duration / 1000f);
+		}
 	}
 
 	private void prepareMusicFile() {

@@ -15,7 +15,7 @@ public class DbSchema {
 
 		public static final class Cols {
 			public static final String ACTIVITY = "activity";
-			public static final String START_TIME = "startTime";
+			public static final String DURATION = "duration";
 		}
 	}
 
