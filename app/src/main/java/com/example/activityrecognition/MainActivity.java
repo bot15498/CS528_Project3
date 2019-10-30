@@ -91,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements
 	private String currGeofenceID = "";
 	private long lastEnterTime = 0;
 	private String lastActivity = "";
+	private static final int LOCATION_REQUEST_CODE = 11111;
 
 	private BroadcastReceiver broadcastReceiver;
 	private BroadcastReceiver activityBroadcastReceiver;
@@ -121,23 +122,28 @@ public class MainActivity extends AppCompatActivity implements
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		lastActivityTimestamp = System.currentTimeMillis();
+		geofenceInfo = new HashMap<String, LatLng>();
+		geofenceInfo.put(FULLER, new LatLng(42.274852, -71.806690));
+		geofenceInfo.put(LIBRARY, new LatLng(42.274292, -71.806641));
+
+		requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, LOCATION_REQUEST_CODE);
 
 		// Register receiver
 		registerReceiver();
 
 		// Geofencing pre-init. Real init is after map and location services are loaded.
-		if(checkPermission()) {
-			geofenceInfo = new HashMap<String, LatLng>();
-			geofenceInfo.put(FULLER, new LatLng(42.274852, -71.806690));
-			geofenceInfo.put(LIBRARY, new LatLng(42.274292, -71.806641));
-			libraryTextView = findViewById(R.id.library);
-			fullerTextView = findViewById(R.id.fuller);
-			String fullerTxt = getText(R.string.fuller) + Integer.toString(fullerVisits);
-			fullerTextView.setText(fullerTxt);
-			String libraryTxt = getText(R.string.library) + Integer.toString(libraryVisits);
-			libraryTextView.setText(libraryTxt);
-			startGeofence();
-		}
+//		if(checkPermission()) {
+//			geofenceInfo = new HashMap<String, LatLng>();
+//			geofenceInfo.put(FULLER, new LatLng(42.274852, -71.806690));
+//			geofenceInfo.put(LIBRARY, new LatLng(42.274292, -71.806641));
+//			libraryTextView = findViewById(R.id.library);
+//			fullerTextView = findViewById(R.id.fuller);
+//			String fullerTxt = getText(R.string.fuller) + Integer.toString(fullerVisits);
+//			fullerTextView.setText(fullerTxt);
+//			String libraryTxt = getText(R.string.library) + Integer.toString(libraryVisits);
+//			libraryTextView.setText(libraryTxt);
+//			startGeofence();
+//		}
 
 		SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 		detectedActivityImageView = findViewById(R.id.detectedActivityImageView);
@@ -177,6 +183,48 @@ public class MainActivity extends AppCompatActivity implements
 		// Ask for permission if it wasn't granted yet
 		return (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
 				== PackageManager.PERMISSION_GRANTED);
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		switch (requestCode) {
+			case LOCATION_REQUEST_CODE: {
+				// If request is cancelled, the result arrays are empty.
+				if (grantResults.length > 0
+						&& grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+					map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+					map.setMyLocationEnabled(true);
+					drawGeofences();
+					latlng = new LatLng(42.2742608, -71.8066728);
+					map.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, MAP_CAMERA_ZOOM));
+
+					mApiClient = new GoogleApiClient.Builder(this)
+							.addApi(ActivityRecognition.API)
+							.addConnectionCallbacks(this)
+							.addOnConnectionFailedListener(this)
+							.build();
+
+					mApiClient.connect();
+
+					libraryTextView = findViewById(R.id.library);
+					fullerTextView = findViewById(R.id.fuller);
+					String fullerTxt = getText(R.string.fuller) + Integer.toString(fullerVisits);
+					fullerTextView.setText(fullerTxt);
+					String libraryTxt = getText(R.string.library) + Integer.toString(libraryVisits);
+					libraryTextView.setText(libraryTxt);
+
+					startGeofence();
+				} else {
+					Toast.makeText(getApplicationContext(), "Why did you press deny for location?", Toast.LENGTH_LONG).show();
+				}
+				return;
+			}
+			default:
+				return;
+
+			// other 'case' lines to check for other
+			// permissions this app might request.
+		}
 	}
 
 
@@ -380,21 +428,8 @@ public class MainActivity extends AppCompatActivity implements
 		Log.d(TAG, "onMapReady()");
 		MapsInitializer.initialize(getApplicationContext());
 		map = googleMap;
-		map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
-		map.setMyLocationEnabled(true);
-
-
-		drawGeofences();
-		latlng = new LatLng(42.2742608, -71.8066728);
-		map.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng, MAP_CAMERA_ZOOM));
-
-		mApiClient = new GoogleApiClient.Builder(this)
-				.addApi(ActivityRecognition.API)
-				.addConnectionCallbacks(this)
-				.addOnConnectionFailedListener(this)
-				.build();
-
-		mApiClient.connect();
+//		map.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+//		map.setMyLocationEnabled(true);
 	}
 
 	// Draw Geofence circle on GoogleMap
@@ -425,64 +460,67 @@ public class MainActivity extends AppCompatActivity implements
 				 * Step 3: We can update the UI of the activity here
 				 * */
 				if (activity != null) {
-					long duration = currTime - lastActivityTimestamp;
-					if(!lastActivity.equals("")) {
-						dbLab.saveActivity(lastActivity, duration);
+					if(!activity.equals(lastActivity)) {
+						long duration = currTime - lastActivityTimestamp;
+						if(!lastActivity.equals("")) {
+							dbLab.saveActivity(lastActivity, duration);
+						}
+						Toast toast = Toast.makeText(getApplicationContext(), getActivityToastText(lastActivity, duration), Toast.LENGTH_LONG);
+						toast.show();
+						lastActivity = activity;
+						lastActivityTimestamp = System.currentTimeMillis();
+						switch (activity) {
+							case "in_car": {
+								if (detectedActivityImageView != null) {
+									detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
+								}
+								if (activityTextView != null) {
+									activityTextView.setText("You are in a Car");
+								}
+								if(player != null) {
+									player.stop();
+								}
+								break;
+							}
+							case "running": {
+								if (detectedActivityImageView != null) {
+									detectedActivityImageView.setImageResource(R.mipmap.ic_running);
+								}
+								if (activityTextView != null) {
+									activityTextView.setText("You are Running");
+								}
+								if(player != null) {
+									player.start();
+								}
+								break;
+							}
+							case "still": {
+								if (detectedActivityImageView != null) {
+									detectedActivityImageView.setImageResource(R.mipmap.ic_still);
+								}
+								if (activityTextView != null) {
+									activityTextView.setText("You are Still");
+								}
+								if(player != null) {
+									player.stop();
+								}
+								break;
+							}
+							case "walking": {
+								if (detectedActivityImageView != null) {
+									detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
+								}
+								if (activityTextView != null) {
+									activityTextView.setText("You are Walking");
+								}
+								if(player != null) {
+									player.stop();
+								}
+								break;
+							}
+						}
 					}
-					Toast toast = Toast.makeText(getApplicationContext(), getActivityToastText(lastActivity, duration), Toast.LENGTH_LONG);
-					toast.show();
-					lastActivity = activity;
-					lastActivityTimestamp = System.currentTimeMillis();
-					switch (activity) {
-						case "in_car": {
-							if (detectedActivityImageView != null) {
-								detectedActivityImageView.setImageResource(R.mipmap.ic_in_car);
-							}
-							if (activityTextView != null) {
-								activityTextView.setText("You are in a Car");
-							}
-							if(player != null) {
-								player.stop();
-							}
-							break;
-						}
-						case "running": {
-							if (detectedActivityImageView != null) {
-								detectedActivityImageView.setImageResource(R.mipmap.ic_running);
-							}
-							if (activityTextView != null) {
-								activityTextView.setText("You are Running");
-							}
-							if(player != null) {
-								player.start();
-							}
-							break;
-						}
-						case "still": {
-							if (detectedActivityImageView != null) {
-								detectedActivityImageView.setImageResource(R.mipmap.ic_still);
-							}
-							if (activityTextView != null) {
-								activityTextView.setText("You are Still");
-							}
-							if(player != null) {
-								player.stop();
-							}
-							break;
-						}
-						case "walking": {
-							if (detectedActivityImageView != null) {
-								detectedActivityImageView.setImageResource(R.mipmap.ic_walking);
-							}
-							if (activityTextView != null) {
-								activityTextView.setText("You are Walking");
-							}
-							if(player != null) {
-								player.stop();
-							}
-							break;
-						}
-					}
+
 				}
 				Log.e(getClass().getName(), "Got back activity: " + activity);
 			}
