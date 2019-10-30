@@ -20,7 +20,7 @@ public class ActivityDataBaseHelper extends SQLiteOpenHelper {
 		sqLiteDatabase.execSQL("create table " + ActivitiesTable.NAME + "(" +
 				"_id integer primary key autoincrement, " +
 				ActivitiesTable.Cols.ACTIVITY + ", " +
-				ActivitiesTable.Cols.START_TIME +
+				ActivitiesTable.Cols.DURATION +
 				")"
 		);
 
